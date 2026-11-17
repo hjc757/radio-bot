@@ -1,0 +1,92 @@
+# Mumble ⇄ 车载电台 互联桥配置
+# 部署位置：/root/radio/radio.ini
+
+[mumble]
+# 你的 murmur 服务端（N1 本机跑的就是 192.168.123.118）
+host = 127.0.0.1
+port = 64738
+# 桥接专用账号，别和 mumble_bot 的 BOT 抢身份
+username = STN-BOT
+password =
+certfile = /root/radio/radio.pem   # Mumble 服务端证书，填 <host>.pem
+# 多个令牌用英文逗号分隔
+tokens =
+# 想自动进某个频道就填频道名，留空则待在根频道
+channel =
+# ── Mumble 侧音量与灵敏度（只影响进出 Mumble 的音频，不动声卡/系统音量）──
+# 话筒灵敏度：电台→Mumble 方向的增益（dB），正数更灵敏，负数是衰减
+mic_gain_db = 0
+# 音量：Mumble→电台 方向的增益（dB），正数更响
+volume_db = 0
+
+# 不从这些账号收音频，避免它们长期占住电台 PTT。
+# 想听音乐机器人 BOT 播放的内容（音乐会从电台出声），就保持下面整行注释；
+# 想只在手机 Mumble 里听音乐、电台只转发人声，就取消注释。
+# 多个账号用英文逗号分隔，例如 ignore_users = BOT,MUSIC
+#ignore_users = BOT
+
+[audio]
+# CM108B 在 N1 上是 card 1（用 arecord -l / aplay -l 核对）
+capture_device = plug:dsnoop_in
+playback_device = plug:dmix_out
+# 电台 LINE OUT 电平偏小就往上加，过载就减（单位 dB，0 = 不处理）
+capture_gain_db = 0
+# 送进电台 MIC 的电平，先用 0，按电台 MIC 灵敏度调
+playback_gain_db = 0
+# 采样率，麦克风与声卡都按这个跑，一般不要改
+rate = 48000
+# 10ms 一块是低延迟与 CPU 的平衡点，别大于 20
+period_ms = 10
+buffer_ms = 40
+
+[ptt]
+# auto = 自动扫描 CM108；也可写死 /dev/hidraw0
+hidraw = auto
+# GPIO3 = 物理 pin13（PTT 常用脚）
+gpio_pin = 3
+# Motorola 电台 PTT 是低电平触发 → true
+invert = true
+# 起键后等多久才开始送音频（电台 PTT 建立时间）
+lead_ms = 100
+fade_ms = 30
+# 攒够多少音频才允许开 PTT（"不吃字"关键，别低于 40ms）
+prime_ms = 60
+# 最后一段音频播完后再保持多久才落 PTT（防咬尾）
+tail_ms = 200
+# 单次发射硬上限（秒），超时自动落键
+# 最长按住 PTT 的秒数，和电台自身超时保持一致
+max_tx_sec = 60
+
+[gate]
+# 电台→Mumble 方向开关：true=把电台收到的声音送回 Mumble；false=只做 Mumble→电台
+# 关掉后电台侧声音不会进 Mumble，也不占用带宽
+uplink_enabled = true
+# 连续发声：true=不做 VAD，采集到的声音持续送进 Mumble（相当于客户端一直按住说话）；
+# false=只有电台有声音时才送（省带宽，安静时不刷屏）
+always_send = true
+# 软件 VAD：int16 的 RMS 阈值，安静时先看日志里的 RX 电平再定
+vad_threshold = 3500
+# 抬阈值后保持多久才认为讲完（防尾音被切）
+vad_hold_ms = 250
+# 预录多久的历史音频（触发瞬间补发，防吃第一声）
+pre_roll_ms = 150
+# 下行音频最多缓存多久（超了丢最老帧，压住延迟）
+tx_queue_max_ms = 1500
+
+[service]
+heartbeat_file = /root/radio/run/heartbeat
+
+# 诊断日志：每 5 秒打印一次 RX触发/预录帧/采集落后/起键延时/尾音/Mumble积压
+diag = true
+diag_period_sec = 5
+# 心跳文件写入间隔（秒），供 radio-guard 判断桥是否活着
+heartbeat_interval_sec = 0.2
+# PTT 保活间隔（秒），长时间按住时定期重写 GPIO
+keepalive_sec = 2.0
+# 采集落后告警：累计落后多少帧才算异常、多久告警一次
+lag_warn_frames = 5
+lag_warn_interval_sec = 5
+# Mumble 侧发送积压告警阈值（毫秒）
+mumble_buf_warn_ms = 400
+# 自检模式注入间隔（秒，仅在 --selftest 时用）
+selftest_interval_sec = 4.0

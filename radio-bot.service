@@ -1,0 +1,20 @@
+[Unit]
+Description=Mumble <-> Radio Bridge (pymumble + CM108)
+After=network-online.target sound.target
+Wants=network-online.target
+Requires=radio-guard.service
+After=radio-guard.service
+
+[Service]
+Type=simple
+User=root
+Nice=-5
+WorkingDirectory=/root/radio
+ExecStart=/py/env/bin/python /root/radio/bridge.py -c /root/radio/radio.ini
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

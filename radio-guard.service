@@ -1,0 +1,15 @@
+[Unit]
+Description=CM108 PTT Guard (stuck-PTT protection)
+After=local-fs.target
+PartOf=radio-bot.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/radio
+ExecStart=/py/env/bin/python /root/radio/ptt-guard.py -c /root/radio/radio.ini --stale 2.0
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
